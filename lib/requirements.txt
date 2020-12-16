@@ -3,4 +3,5 @@ numpy==1.15.1
 google-cloud-bigquery==1.9.0
 requests==2.22.0
 beautifulsoup4==4.8.1
+pyarrow=0.16.2
 google-cloud-storage==1.13.2
