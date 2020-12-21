@@ -19,10 +19,11 @@ def clean_symbols(symbols):
     Process: We removed additional information of the symbols (dot or striped followed by an alphabet letter)    
     Output: cleaned symbols (AACL)
     """
+    symbols_clean = []
     for each in symbols:
         each = each.replace('.','-')
         symbols_clean.append((each.split('-')[0]))
-return symbols_clean
+    return symbols_clean
 
 def chunks(l,n):
     """
@@ -97,7 +98,12 @@ def daily_equity_quotes(event, context):
 
                 time.sleep(1)
 
-                return pd.Dataframe.from_dict
+                return pd.Dataframe.from_dict(
+                    request,
+                    orient='index').reset_index(drop=True)
+                
+                
+            df = pd.concat([quotes_request(each) for each in symbols_chunked])
                 
     except KeyError:
         Pass
