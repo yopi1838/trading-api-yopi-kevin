@@ -83,6 +83,21 @@ def daily_equity_quotes(event, context):
                 makes API call for a list of stock symbols
                 and returns a dataframe
                 """
+                url = r"https://api.tdameritrade.com/v1/marketdata/quotes"
+
+                params = {
+                    'apikey': api_key,
+                    'stocks': stocks
+                }
+
+                request = requests.get(
+                    url=url,
+                    params=params
+                ).json()
+
+                time.sleep(1)
+
+                return pd.Dataframe.from_dict
                 
     except KeyError:
         Pass
