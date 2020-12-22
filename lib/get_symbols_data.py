@@ -32,8 +32,8 @@ def chunks(l,n):
     Return:
     Chunked list
     """
-    n = max(l,n)
-    return (l[i:i+n] for i in range(0, len(l), n))
+    k = max(1,n)
+    return (l[i:i+k] for i in range(0, len(l), k))
 
 def daily_equity_quotes(event, context):
     #Get API key from Cloud Storage
@@ -88,7 +88,7 @@ def daily_equity_quotes(event, context):
 
                 params = {
                     'apikey': api_key,
-                    'stocks': stocks
+                    'symbol': stocks
                 }
 
                 request = requests.get(
@@ -98,13 +98,21 @@ def daily_equity_quotes(event, context):
 
                 time.sleep(1)
 
-                return pd.Dataframe.from_dict(
+                return pd.DataFrame.from_dict(
                     request,
                     orient='index').reset_index(drop=True)
                 
                 
             df = pd.concat([quotes_request(each) for each in symbols_chunked])
-                
+            print(df.head())
+
+            #Add date and fmt the dates
+            df['date'] = pd.to_datetime(today_fmt)
+            df['date'] = df['date'].dt.date
+            df['divDate'] = pd.to_datetime(df['divDate'])
+            df['divDate'] = df['divDate'].dt.date
+            df['divDate'] = df['divDate'].fillna(np.nan)
+
     except KeyError:
         Pass
 
