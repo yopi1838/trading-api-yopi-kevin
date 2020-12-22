@@ -12,6 +12,7 @@ import string
 import time
 
 symbol_list = r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\data"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="/Users/yopiprabowooktiovan/Dropbox/python_projects/trading-api-yopi-kevin/kevin-yopi-trading-api-bbe2ba990cb2.json"
 
 def clean_symbols(symbols):
     """
@@ -113,8 +114,43 @@ def daily_equity_quotes(event, context):
             df['divDate'] = df['divDate'].dt.date
             df['divDate'] = df['divDate'].fillna(np.nan)
 
+            #Remove anything without price
+            df = df.loc[df['bidPrice'] > 0]
+
+            #Rename columns and format for bq
+            df = df.rename(columns={
+                '52WkHigh': '_52WkHigh',
+                '52WkLow': '_52WkLow'
+            })
+
+            #Add to bigquery
+            client = bigquery.Client()
+
+            dataset_id = 'equity_data'
+            table_id = 'daily_quote_data'
+
+            dataset_ref = client.dataset(dataset_id)
+            table_ref = dataset_ref.table(table_id)
+
+            job_config = bigquery.LoadJobConfig()
+            job_config.source_format = bigquery.SourceFormat.CSV
+            job_config.autodetect = True
+            job_config.ignore_unknown_values = True
+
+            job = client.load_table_from_dataframe(
+                df,
+                table_ref,
+                location='US',
+                job_config=job_config
+            )
+
+            job.result()
+
+            return 'done'
+        else:
+            pass
     except KeyError:
-        Pass
+        pass
 
 if __name__ == "__main__":
     daily_equity_quotes("a","b")
