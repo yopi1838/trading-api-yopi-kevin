@@ -12,7 +12,7 @@ import string
 import time
 
 symbol_list = r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\data"
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="/Users/yopiprabowooktiovan/Dropbox/python_projects/trading-api-yopi-kevin/kevin-yopi-trading-api-bbe2ba990cb2.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\lib\kevin-yopi-trading-api-bbe2ba990cb2.json"
 
 def clean_symbols(symbols):
     """
@@ -126,12 +126,19 @@ def daily_equity_quotes(event, context):
             #Add to bigquery
             client = bigquery.Client()
 
-            dataset_id = 'equity_data'
+            dataset_id = "{}.equity_data".format(client.project)
             table_id = 'daily_quote_data'
 
-            dataset_ref = client.dataset(dataset_id)
-            table_ref = dataset_ref.table(table_id)
+            """
+            dataset = bigquery.Dataset(dataset_id)
 
+            dataset.location = "US"
+            dataset = client.create_dataset(dataset, timeout = 30)
+
+            print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
+            """
+            table_ref = "{}.{}".format(dataset_id,table_id)
+            
             job_config = bigquery.LoadJobConfig()
             job_config.source_format = bigquery.SourceFormat.CSV
             job_config.autodetect = True
@@ -140,7 +147,7 @@ def daily_equity_quotes(event, context):
             job = client.load_table_from_dataframe(
                 df,
                 table_ref,
-                location='US',
+                location="US",
                 job_config=job_config
             )
 
