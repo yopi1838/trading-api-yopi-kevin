@@ -12,7 +12,7 @@ import string
 import time
 
 symbol_list = r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\data"
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\lib\kevin-yopi-trading-api-bbe2ba990cb2.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"/Users/yopiprabowooktiovan/Dropbox/python_projects/trading-api-yopi-kevin/lib/kevin-yopi-trading-api-bbe2ba990cb2.json"
 
 def clean_symbols(symbols):
     """
@@ -68,7 +68,7 @@ def daily_equity_quotes(event, context):
             symbols = []
 
             for each in alpha:
-                url = 'http://eoddata.com/stocklist/NASDAQ/{}.htm'.format(each)
+                url = 'http://eoddata.com/stocklist/NYSE/{}.htm'.format(each)
                 resp = requests.get(url)
                 site = resp.content
                 soup = BeautifulSoup(site, 'html.parser')
@@ -104,8 +104,7 @@ def daily_equity_quotes(event, context):
                     orient='index').reset_index(drop=True)
                 
                 
-            df = pd.concat([quotes_request(each) for each in symbols_chunked])
-            print(df.head())
+            df = pd.concat([quotes_request(each) for each in symbols_chunked], sort=False)
 
             #Add date and fmt the dates
             df['date'] = pd.to_datetime(today_fmt)
@@ -114,20 +113,21 @@ def daily_equity_quotes(event, context):
             df['divDate'] = df['divDate'].dt.date
             df['divDate'] = df['divDate'].fillna(np.nan)
 
+
             #Remove anything without price
             df = df.loc[df['bidPrice'] > 0]
 
             #Rename columns and format for bq
             df = df.rename(columns={
-                '52WkHigh': '_52WkHigh',
-                '52WkLow': '_52WkLow'
+                '52WkHigh': 'a52WkHigh',
+                '52WkLow': 'a52WkLow'
             })
 
             #Add to bigquery
             client = bigquery.Client()
 
             dataset_id = "{}.equity_data".format(client.project)
-            table_id = 'daily_quote_data'
+            table_id = 'daily_quote_data_NYSE'
 
             """
             dataset = bigquery.Dataset(dataset_id)
@@ -137,6 +137,7 @@ def daily_equity_quotes(event, context):
 
             print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
             """
+
             table_ref = "{}.{}".format(dataset_id,table_id)
             
             job_config = bigquery.LoadJobConfig()
