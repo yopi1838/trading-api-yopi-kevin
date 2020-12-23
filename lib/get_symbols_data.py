@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from google.cloud import bigquery
 from bs4 import BeautifulSoup
 import os, csv
-#import pyarrow
+import pyarrow
 from google.cloud import storage
 import string
 import time
