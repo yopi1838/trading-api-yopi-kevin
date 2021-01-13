@@ -12,7 +12,7 @@ import string
 import time
 
 symbol_list = r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\data"
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"/Users/yopiprabowooktiovan/Dropbox/python_projects/trading-api-yopi-kevin/lib/kevin-yopi-trading-api-bbe2ba990cb2.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"C:\Users\Yopi-CEC\Desktop\programming\trading-api-yopi\lib\kevin-yopi-trading-api-bbe2ba990cb2.json"
 
 def clean_symbols(symbols):
     """
