@@ -53,7 +53,7 @@ for each in alpha:
     for row in table.findAll('tr')[1:]:
         symbols.append(row.findAll('td')[0].text.rstrip())
     
-symbols_sliced = random.sample(symbols, 120)
+symbols_sliced = random.sample(symbols, len(symbols))
 
 # Remove the extra letters on the end
 symbols_clean = []
@@ -65,28 +65,33 @@ for each in symbols_sliced:
 
 # Get the price history for each stock. This can take a while
 consumer_key = 'BIFGL3BYYNDPGQRLVDA50OOH0OSXVIGR'
+params = {
+    'apikey': consumer_key,
+    'periodType': 'month',
+    'frequencyType': 'daily',
+    'frequency': 1,
+    'startDate': date_ms,
+    'endDate': date_ms,
+    'needExtendedHoursData': 'true'
+    }
+
+sem = asyncio.BoundedSemaphore(120)
 
 async def get_pricehistory(symbol, session):
-    params = {
-        'apikey': consumer_key,
-        'periodType': 'month',
-        'frequencyType': 'daily',
-        'frequency': 1,
-        'startDate': date_ms,
-        'endDate': date_ms,
-        'needExtendedHoursData': 'true'
-        }
-    url = r"https://api.tdameritrade.com/v1/marketdata/{}/pricehistory".format(symbol)
-    try:
-        response = await session.request(method='GET', url=url, params=params)
-        response.raise_for_status()
-        print(f"Response status ({url}: {response.status}")
-    except HTTPError as http_err:
-        print(f"HTTP error occcured: {http_err}")
-    except Exception as err:
-        print(f"An error has occurred: {err}")
-    response_json = await response.json()
-    return response_json
+    async with sem:
+        url = r"https://api.tdameritrade.com/v1/marketdata/{}/pricehistory".format(symbol)
+        try:
+            response = await session.request(method='GET', url=url, params=params)
+            print(f"Processing {url}...")
+            await asyncio.sleep(60)
+            response.raise_for_status()
+            print(f"Response status ({url}: {response.status}")
+        except HTTPError as http_err:
+            print(f"HTTP error occcured: {http_err}")
+        except Exception as err:
+            print(f"An error has occurred: {err}")
+        response_json = await response.json()
+        return response_json
 
 def extract_responses(response):
     """
@@ -140,7 +145,8 @@ async def run_program(symbol, session):
 
 async def run_session():
     async with ClientSession() as session:
-        price_history_list = await asyncio.gather(*[run_program(symbol, session) for symbol in symbols_clean])
+        tasks = [run_program(symbol, session) for symbol in symbols_clean]
+        price_history_list = await asyncio.gather(*tasks)
         
         #Turn results into Pandas DataFrame
         df = pd.DataFrame(list(price_history_list), columns=['symbol', 'open', 'close', 'volume', 'date'])
@@ -150,34 +156,37 @@ async def run_session():
         df = df.dropna()
         print(df.head())
 
-        # Add to BigQuery
-        client = bigquery.Client()
-        dataset_id = "{}.equity_data".format(client.project)
-        table_id = 'pricehistory_data_NYSE'
+        # # Add to BigQuery
+        # client = bigquery.Client()
+        # dataset_id = "{}.equity_data".format(client.project)
+        # table_id = 'pricehistory_data_NYSE'
 
-        # dataset = bigquery.Dataset(dataset_id)
+        # # dataset = bigquery.Dataset(dataset_id)
 
-        # dataset.location = "US"
-        # dataset = client.create_dataset(dataset, timeout = 30)
+        # # dataset.location = "US"
+        # # dataset = client.create_dataset(dataset, timeout = 30)
 
-        table_ref = "{}.{}".format(dataset_id,table_id)
+        # table_ref = "{}.{}".format(dataset_id,table_id)
                     
-        job_config = bigquery.LoadJobConfig()
-        job_config.source_format = bigquery.SourceFormat.CSV
-        job_config.autodetect = True
-        job_config.ignore_unknown_values = True
+        # job_config = bigquery.LoadJobConfig()
+        # job_config.source_format = bigquery.SourceFormat.CSV
+        # job_config.autodetect = True
+        # job_config.ignore_unknown_values = True
 
-        job = client.load_table_from_dataframe(
-                df,
-                table_ref,
-                location="US",
-                job_config=job_config
-                )
-        job.result()
+        # job = client.load_table_from_dataframe(
+        #         df,
+        #         table_ref,
+        #         location="US",
+        #         job_config=job_config
+        #         )
+        # job.result()
 
 def main():
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run_session())
+    try:
+        loop.run_until_complete(run_session())
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
     #loop.close()
 
 
@@ -185,45 +194,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-# for each in symbols_clean:
-#     url = r"https://api.tdameritrade.com/v1/marketdata/{}/pricehistory".format(each)
-
-#     # You can do whatever period/frequency you want
-#     # This will grab the data for a single day
-#     params = {
-#         'apikey': consumer_key,
-#         'periodType': 'month',
-#         'frequencyType': 'daily',
-#         'frequency': '1',
-#         'startDate': date_ms,
-#         'endDate': date_ms,
-#         'needExtendedHoursData': 'true'
-#         }
-
-#     request = requests.get(
-#         url=url,
-#         params=params
-#         )
-
-#     data_list.append(request.json())
-#     time.sleep(.5)
-
-
-
-# for data in data_list:
-#     try:
-#         symbl_name  = data['symbol']
-#     except KeyError:
-#         symbl_name = np.nan
-#     try:
-#         for each in data['candles']:
-#             symbl_l.append(symbl_name)
-#             open_l.append(each['open'])
-#             high_l.append(each['high'])
-#             low_l.append(each['low'])
-#             close_l.append(each['close'])
-#             date_l.append(each['datetime'])
-#     except KeyError:
-#         pass
 
