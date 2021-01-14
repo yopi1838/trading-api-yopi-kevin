@@ -34,7 +34,8 @@ def chunks(l,n):
     return (l[i:i+k] for i in range(0, len(l), k))
 
 # Only doing one day here as an example
-date = datetime.strptime('2019-11-19', '%Y-%m-%d')
+start_date = datetime.strptime('2019-11-19', '%Y-%m-%d')
+end_date = datetime.strptime('2020-11-19', '%Y-%m-%d')
 
 # Convert to unix for the API
 date_ms = unix_time_millisec(date)
@@ -52,14 +53,13 @@ for each in alpha:
     table = soup.find('table', {'class': 'quotes'})
     for row in table.findAll('tr')[1:]:
         symbols.append(row.findAll('td')[0].text.rstrip())
-    
-symbols_sliced = random.sample(symbols, len(symbols))
 
 # Remove the extra letters on the end
 symbols_clean = []
 # print(symbols)
+symbols_randomized = random.sample(symbols, 500)
 
-for each in symbols_sliced:
+for each in symbols_randomized:
     each = each.replace('.', '-')
     symbols_clean.append((each.split('-')[0]))
 
@@ -156,30 +156,30 @@ async def run_session():
         df = df.dropna()
         print(df.head())
 
-        # # Add to BigQuery
-        # client = bigquery.Client()
-        # dataset_id = "{}.equity_data".format(client.project)
-        # table_id = 'pricehistory_data_NYSE'
+        # Add to BigQuery
+        client = bigquery.Client()
+        dataset_id = "{}.equity_data".format(client.project)
+        table_id = 'pricehistory_data_NYSE_2019-11-19'
 
-        # # dataset = bigquery.Dataset(dataset_id)
+        # dataset = bigquery.Dataset(dataset_id)
 
-        # # dataset.location = "US"
-        # # dataset = client.create_dataset(dataset, timeout = 30)
+        # dataset.location = "US"
+        # dataset = client.create_dataset(dataset, timeout = 30)
 
-        # table_ref = "{}.{}".format(dataset_id,table_id)
+        table_ref = "{}.{}".format(dataset_id,table_id)
                     
-        # job_config = bigquery.LoadJobConfig()
-        # job_config.source_format = bigquery.SourceFormat.CSV
-        # job_config.autodetect = True
-        # job_config.ignore_unknown_values = True
+        job_config = bigquery.LoadJobConfig()
+        job_config.source_format = bigquery.SourceFormat.CSV
+        job_config.autodetect = True
+        job_config.ignore_unknown_values = True
 
-        # job = client.load_table_from_dataframe(
-        #         df,
-        #         table_ref,
-        #         location="US",
-        #         job_config=job_config
-        #         )
-        # job.result()
+        job = client.load_table_from_dataframe(
+                df,
+                table_ref,
+                location="US",
+                job_config=job_config
+                )
+        job.result()
 
 def main():
     loop = asyncio.get_event_loop()
