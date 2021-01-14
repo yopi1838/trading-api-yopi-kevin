@@ -38,7 +38,8 @@ start_date = datetime.strptime('2019-11-19', '%Y-%m-%d')
 end_date = datetime.strptime('2020-11-19', '%Y-%m-%d')
 
 # Convert to unix for the API
-date_ms = unix_time_millisec(date)
+start_date_ms = unix_time_millisec(start_date)
+end_date_ms = unix_time_millisec(end_date)
 
 # Get a current list of all the stock symbols for the NYSE
 alpha = list(string.ascii_uppercase)
@@ -57,7 +58,7 @@ for each in alpha:
 # Remove the extra letters on the end
 symbols_clean = []
 # print(symbols)
-symbols_randomized = random.sample(symbols, 500)
+symbols_randomized = random.sample(symbols, 120)
 
 for each in symbols_randomized:
     each = each.replace('.', '-')
@@ -70,12 +71,13 @@ params = {
     'periodType': 'month',
     'frequencyType': 'daily',
     'frequency': 1,
-    'startDate': date_ms,
-    'endDate': date_ms,
+    'startDate': start_date_ms,
+    'endDate': end_date_ms,
     'needExtendedHoursData': 'true'
     }
 
-sem = asyncio.BoundedSemaphore(120)
+sem = asyncio.BoundedSemaphore(1)
+symbl_l, open_l, close_l, volume_l, date_l = [],[],[],[],[]
 
 async def get_pricehistory(symbol, session):
     async with sem:
@@ -83,7 +85,7 @@ async def get_pricehistory(symbol, session):
         try:
             response = await session.request(method='GET', url=url, params=params)
             print(f"Processing {url}...")
-            await asyncio.sleep(60)
+            # await asyncio.sleep(60)
             response.raise_for_status()
             print(f"Response status ({url}: {response.status}")
         except HTTPError as http_err:
@@ -111,17 +113,31 @@ def extract_responses(response):
     # symbol = "test"
     symbol = response.get("symbol")
     candle = response.get("candles", [{}])
-    open_price = response.get("candles", [{}])[0]['open']
-    close_price = response.get("candles", [{}])[0]['close']
-    volume = response.get("candles", [{}])[0]['volume']
-    date = response.get("candles", [{}])[0]['datetime']
-    return (
-        symbol,
-        open_price,
-        close_price,
-        volume,
-        date
-    )
+    for i in range(len(candle)):
+        open_price = response.get("candles", [{}])[i]['open']
+        close_price = response.get("candles", [{}])[i]['close']
+        volume = response.get("candles", [{}])[i]['volume']
+        date = response.get("candles", [{}])[i]['datetime']
+
+        symbl_l.append(symbol)
+        open_l.append(open_price)
+        close_l.append(close_price)
+        volume_l.append(volume)
+        date_l.append(date)
+
+    df = pd.DataFrame({
+        'symbol': symbl_l,
+        'open': open_l,
+        'close': close_l,
+        'date': date_l
+    })
+    df['date']=pd.to_datetime(df['date'], unit='ms')
+    df['date'] = df['date'].dt.strftime('%Y-%m-%d, %H-%M-%S')
+    df = df.dropna()
+
+    df1 = df[df['symbol'] == symbol]
+    df1.to_csv(f'.\data\{symbol}_pricehistory.csv', index=False)
+    return 'Parsed!'
 
 async def run_program(symbol, session):
     """
@@ -136,9 +152,31 @@ async def run_program(symbol, session):
     """
     try:
         response = await get_pricehistory(symbol, session)
-        parsed_response = extract_responses(response)
+        extract_responses(response)
+
+        # # Add to BigQuery
+        # client = bigquery.Client()
+        # dataset_id = "{}.equity_data".format(client.project)
+        # table_id = 'pricehistory_data_{}_2019-11-19'.format(symbol)
+
+        # table_ref = "{}.{}".format(dataset_id,table_id)
+                    
+        # job_config = bigquery.LoadJobConfig()
+        # job_config.source_format = bigquery.SourceFormat.CSV
+        # job_config.autodetect = True
+        # job_config.ignore_unknown_values = True
+
+        # job = client.load_table_from_dataframe(
+        #         df,
+        #         table_ref,
+        #         location="US",
+        #         job_config=job_config
+        #         )
+
+        # job.result()
         # print(f"Response: {json.dumps(parsed_response, indent=2)}")
-        return parsed_response
+        # return parsed_response
+
     except Exception as err:
         print(f"Exception occurred: {err}")
         pass
@@ -146,40 +184,9 @@ async def run_program(symbol, session):
 async def run_session():
     async with ClientSession() as session:
         tasks = [run_program(symbol, session) for symbol in symbols_clean]
-        price_history_list = await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
         
-        #Turn results into Pandas DataFrame
-        df = pd.DataFrame(list(price_history_list), columns=['symbol', 'open', 'close', 'volume', 'date'])
-        df.astype({'symbol': 'str', 'open': 'float', 'close': 'float', 'volume': 'float', 'date': 'string'}).dtypes
-        df['date']=pd.to_datetime(df['date'], unit='ms')
-        df['date'] = df['date'].dt.strftime('%Y-%m-%d')
-        df = df.dropna()
-        print(df.head())
-
-        # Add to BigQuery
-        client = bigquery.Client()
-        dataset_id = "{}.equity_data".format(client.project)
-        table_id = 'pricehistory_data_NYSE_2019-11-19'
-
-        # dataset = bigquery.Dataset(dataset_id)
-
-        # dataset.location = "US"
-        # dataset = client.create_dataset(dataset, timeout = 30)
-
-        table_ref = "{}.{}".format(dataset_id,table_id)
-                    
-        job_config = bigquery.LoadJobConfig()
-        job_config.source_format = bigquery.SourceFormat.CSV
-        job_config.autodetect = True
-        job_config.ignore_unknown_values = True
-
-        job = client.load_table_from_dataframe(
-                df,
-                table_ref,
-                location="US",
-                job_config=job_config
-                )
-        job.result()
+        
 
 def main():
     loop = asyncio.get_event_loop()
