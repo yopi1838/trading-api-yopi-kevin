@@ -58,7 +58,7 @@ for each in alpha:
 # Remove the extra letters on the end
 symbols_clean = []
 # print(symbols)
-symbols_randomized = random.sample(symbols, 120)
+symbols_randomized = random.sample(symbols, 480)
 
 for each in symbols_randomized:
     each = each.replace('.', '-')
@@ -76,7 +76,7 @@ params = {
     'needExtendedHoursData': 'true'
     }
 
-sem = asyncio.BoundedSemaphore(1)
+sem = asyncio.BoundedSemaphore(120)
 symbl_l, open_l, close_l, volume_l, date_l = [],[],[],[],[]
 
 async def get_pricehistory(symbol, session):
@@ -85,7 +85,7 @@ async def get_pricehistory(symbol, session):
         try:
             response = await session.request(method='GET', url=url, params=params)
             print(f"Processing {url}...")
-            # await asyncio.sleep(60)
+            await asyncio.sleep(60)
             response.raise_for_status()
             print(f"Response status ({url}: {response.status}")
         except HTTPError as http_err:
@@ -129,6 +129,7 @@ def extract_responses(response):
         'symbol': symbl_l,
         'open': open_l,
         'close': close_l,
+        'volume': volume_l,
         'date': date_l
     })
     df['date']=pd.to_datetime(df['date'], unit='ms')
@@ -153,30 +154,6 @@ async def run_program(symbol, session):
     try:
         response = await get_pricehistory(symbol, session)
         extract_responses(response)
-
-        # # Add to BigQuery
-        # client = bigquery.Client()
-        # dataset_id = "{}.equity_data".format(client.project)
-        # table_id = 'pricehistory_data_{}_2019-11-19'.format(symbol)
-
-        # table_ref = "{}.{}".format(dataset_id,table_id)
-                    
-        # job_config = bigquery.LoadJobConfig()
-        # job_config.source_format = bigquery.SourceFormat.CSV
-        # job_config.autodetect = True
-        # job_config.ignore_unknown_values = True
-
-        # job = client.load_table_from_dataframe(
-        #         df,
-        #         table_ref,
-        #         location="US",
-        #         job_config=job_config
-        #         )
-
-        # job.result()
-        # print(f"Response: {json.dumps(parsed_response, indent=2)}")
-        # return parsed_response
-
     except Exception as err:
         print(f"Exception occurred: {err}")
         pass
@@ -186,8 +163,6 @@ async def run_session():
         tasks = [run_program(symbol, session) for symbol in symbols_clean]
         await asyncio.gather(*tasks)
         
-        
-
 def main():
     loop = asyncio.get_event_loop()
     try:
