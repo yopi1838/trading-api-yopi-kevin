@@ -34,7 +34,7 @@ def chunks(l,n):
     return (l[i:i+k] for i in range(0, len(l), k))
 
 # Only doing one day here as an example
-start_date = datetime.strptime('2019-11-19', '%Y-%m-%d')
+start_date = datetime.strptime('2011-11-19', '%Y-%m-%d')
 end_date = datetime.strptime('2020-11-19', '%Y-%m-%d')
 
 # Convert to unix for the API
@@ -64,6 +64,8 @@ for each in symbols_randomized:
     each = each.replace('.', '-')
     symbols_clean.append((each.split('-')[0]))
 
+symbol_aapl = ["AAPL"]
+
 # Get the price history for each stock. This can take a while
 consumer_key = 'BIFGL3BYYNDPGQRLVDA50OOH0OSXVIGR'
 params = {
@@ -77,7 +79,7 @@ params = {
     }
 
 sem = asyncio.BoundedSemaphore(120)
-symbl_l, open_l, close_l, volume_l, date_l = [],[],[],[],[]
+symbl_l, open_l, close_l, volume_l, date_l, high_l, low_l = [], [], [], [], [], [], []
 
 async def get_pricehistory(symbol, session):
     async with sem:
@@ -116,12 +118,16 @@ def extract_responses(response):
     for i in range(len(candle)):
         open_price = response.get("candles", [{}])[i]['open']
         close_price = response.get("candles", [{}])[i]['close']
+        high = response.get("candles", [{}])[i]['high']
+        low = response.get("candles", [{}])[i]['low']
         volume = response.get("candles", [{}])[i]['volume']
         date = response.get("candles", [{}])[i]['datetime']
 
         symbl_l.append(symbol)
         open_l.append(open_price)
         close_l.append(close_price)
+        high_l.append(high)
+        low_l.append(low)
         volume_l.append(volume)
         date_l.append(date)
 
@@ -129,15 +135,19 @@ def extract_responses(response):
         'symbol': symbl_l,
         'open': open_l,
         'close': close_l,
+        'high': high_l,
+        'low': low_l,
         'volume': volume_l,
         'date': date_l
     })
     df['date']=pd.to_datetime(df['date'], unit='ms')
-    df['date'] = df['date'].dt.strftime('%Y-%m-%d, %H-%M-%S')
+    df['date'] = df['date'].dt.strftime('%Y-%m-%d')
     df = df.dropna()
 
     df1 = df[df['symbol'] == symbol]
-    df1.to_csv(f'.\data\{symbol}_pricehistory.csv', index=False)
+    my_path = os.path.abspath(os.path.dirname(__file__))
+    path = os.path.join(my_path, "../data")
+    df1.to_csv(r"{}/{}_pricehistory.csv".format(path, symbol), index=False)
     return 'Parsed!'
 
 async def run_program(symbol, session):
@@ -160,7 +170,7 @@ async def run_program(symbol, session):
 
 async def run_session():
     async with ClientSession() as session:
-        tasks = [run_program(symbol, session) for symbol in symbols_clean]
+        tasks = [run_program(symbol, session) for symbol in symbol_aapl]
         await asyncio.gather(*tasks)
         
 def main():
