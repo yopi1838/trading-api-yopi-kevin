@@ -34,8 +34,8 @@ def chunks(l,n):
     return (l[i:i+k] for i in range(0, len(l), k))
 
 # Only doing one day here as an example
-start_date = datetime.strptime('2011-11-19', '%Y-%m-%d')
-end_date = datetime.strptime('2020-11-19', '%Y-%m-%d')
+start_date = datetime.strptime('2000-01-01', '%Y-%m-%d')
+end_date = datetime.strptime('2020-12-31', '%Y-%m-%d')
 
 # Convert to unix for the API
 start_date_ms = unix_time_millisec(start_date)
@@ -47,7 +47,7 @@ alpha = list(string.ascii_uppercase)
 symbols = []
 
 for each in alpha:
-    url = 'http://eoddata.com/stocklist/NYSE/{}.htm'.format(each)
+    url = 'http://eoddata.com/stocklist/NASDAQ/{}.htm'.format(each)
     resp = requests.get(url)
     site = resp.content
     soup = BeautifulSoup(site, 'html.parser')
@@ -64,10 +64,10 @@ for each in symbols_randomized:
     each = each.replace('.', '-')
     symbols_clean.append((each.split('-')[0]))
 
-symbol_aapl = ["AAPL"]
+symbol_aapl = ["AAL"]
 
 # Get the price history for each stock. This can take a while
-consumer_key = 'BIFGL3BYYNDPGQRLVDA50OOH0OSXVIGR'
+consumer_key = 'QUCHJO09418JZSB4'
 params = {
     'apikey': consumer_key,
     'periodType': 'month',
