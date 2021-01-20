@@ -34,7 +34,7 @@ def chunks(l,n):
     return (l[i:i+k] for i in range(0, len(l), k))
 
 # Only doing one day here as an example
-start_date = datetime.strptime('2000-01-01', '%Y-%m-%d')
+start_date = datetime.strptime('2010-11-19', '%Y-%m-%d')
 end_date = datetime.strptime('2020-12-31', '%Y-%m-%d')
 
 # Convert to unix for the API
@@ -47,7 +47,7 @@ alpha = list(string.ascii_uppercase)
 symbols = []
 
 for each in alpha:
-    url = 'http://eoddata.com/stocklist/NASDAQ/{}.htm'.format(each)
+    url = 'http://eoddata.com/stocklist/NYSE/{}.htm'.format(each)
     resp = requests.get(url)
     site = resp.content
     soup = BeautifulSoup(site, 'html.parser')
@@ -64,27 +64,24 @@ for each in symbols_randomized:
     each = each.replace('.', '-')
     symbols_clean.append((each.split('-')[0]))
 
-symbol_aapl = ["AAL"]
+symbol_aapl = ["AAPL"]
 
 # Get the price history for each stock. This can take a while
-consumer_key = 'QUCHJO09418JZSB4'
-
+consumer_key = 'BIFGL3BYYNDPGQRLVDA50OOH0OSXVIGR'
+params = {
+    'apikey': consumer_key,
+    'periodType': 'month',
+    'frequencyType': 'daily',
+    'frequency': 1,
+    'startDate': start_date_ms,
+    'endDate': end_date_ms,
+    'needExtendedHoursData': 'true'
+    }
 
 sem = asyncio.BoundedSemaphore(120)
 symbl_l, open_l, close_l, volume_l, date_l, high_l, low_l = [], [], [], [], [], [], []
 
 async def get_pricehistory(symbol, session):
-    params = {
-        'apikey': consumer_key,
-        'function': 'TIME_SERIES_DAILY',
-        'symbol': symbol,
-        'periodType': 'month',
-        'frequencyType': 'daily',
-        'frequency': 1,
-        'startDate': start_date_ms,
-        'endDate': end_date_ms,
-        'needExtendedHoursData': 'true'
-    }
     async with sem:
         url = r"https://api.tdameritrade.com/v1/marketdata/{}/pricehistory".format(symbol)
         try:
@@ -173,7 +170,7 @@ async def run_program(symbol, session):
 
 async def run_session():
     async with ClientSession() as session:
-        tasks = [run_program(symbol, session) for symbol in symbol_aapl]
+        tasks = [run_program(symbol, session) for symbol in symbols_clean]
         await asyncio.gather(*tasks)
         
 def main():
