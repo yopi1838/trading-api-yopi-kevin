@@ -34,7 +34,11 @@ def chunks(l,n):
     return (l[i:i+k] for i in range(0, len(l), k))
 
 # Only doing one day here as an example
+<<<<<<< HEAD
 start_date = datetime.strptime('2000-01-01', '%Y-%m-%d')
+=======
+start_date = datetime.strptime('2010-11-19', '%Y-%m-%d')
+>>>>>>> async_function
 end_date = datetime.strptime('2020-12-31', '%Y-%m-%d')
 
 # Convert to unix for the API
@@ -64,7 +68,11 @@ for each in symbols_randomized:
     each = each.replace('.', '-')
     symbols_clean.append((each.split('-')[0]))
 
+<<<<<<< HEAD
 symbol_aapl = ["AAL"]
+=======
+symbol_aapl = ["AAPL"]
+>>>>>>> async_function
 
 # Get the price history for each stock. This can take a while
 consumer_key = 'QUCHJO09418JZSB4'
