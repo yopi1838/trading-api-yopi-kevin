@@ -40,6 +40,10 @@ start_date = datetime.strptime('2000-01-01', '%Y-%m-%d')
 start_date = datetime.strptime('2010-11-19', '%Y-%m-%d')
 >>>>>>> async_function
 end_date = datetime.strptime('2020-12-31', '%Y-%m-%d')
+=======
+start_date = datetime.strptime('2010-11-19', '%Y-%m-%d')
+end_date = datetime.strptime('2012-11-19', '%Y-%m-%d')
+>>>>>>> 24e87e1 (test)
 
 # Convert to unix for the API
 start_date_ms = unix_time_millisec(start_date)
@@ -155,7 +159,7 @@ def extract_responses(response):
     df1 = df[df['symbol'] == symbol]
     my_path = os.path.abspath(os.path.dirname(__file__))
     path = os.path.join(my_path, "../data")
-    df1.to_csv(r"{}/{}_pricehistory.csv".format(path, symbol), index=False)
+    df1.to_csv(r"{}/{}2_pricehistory.csv".format(path, symbol), index=False)
     return 'Parsed!'
 
 async def run_program(symbol, session):
